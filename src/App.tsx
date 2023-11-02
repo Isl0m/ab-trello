@@ -5,30 +5,43 @@ import {
   useDroppable,
 } from "@dnd-kit/core";
 
-const TASK_STATUSES = ["new_task", "in_progress", "done"] as const;
+import { useState, useId } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu";
+
+const INITIAL_COLUMNS = ["New Task", "In Progress", "Done"].map((title) => ({
+  id: crypto.randomUUID(),
+  title,
+}));
 type Task = {
   id: string;
   title: string;
-  status: (typeof TASK_STATUSES)[number];
+  columnId: string;
 };
-
-import { useEffect, useState, useId } from "react";
-import { Button } from "./components/ui/button";
 
 function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [columns, setColumns] = useState(INITIAL_COLUMNS);
 
-  useEffect(() => {
-    window.document.documentElement.classList.add("dark");
-  });
-
-  const updateTask = (taskId: string, status: Task["status"]) => {
+  const updateTask = (taskId: string, columnId: string) => {
     setTasks((prev) => {
       const taskIndex = prev.findIndex((task) => task.id === taskId);
 
       if (taskIndex === -1) return prev;
       const task = prev[taskIndex];
-      task.status = status;
+      task.columnId = columnId;
 
       prev.splice(taskIndex, 1);
       return [...prev, task];
@@ -41,37 +54,65 @@ function App() {
     });
   };
 
+  const handleAddColumn = () => {
+    const title = prompt("Column title");
+    const foundColumn = columns.find((c) => c.title === title);
+    if (title && !foundColumn) {
+      setColumns((prev) => {
+        return [...prev, { id: crypto.randomUUID(), title }];
+      });
+    }
+  };
+
+  const handleDeleteColumn = (id: string) => () => {
+    const isConfirm = confirm("Are you sure?");
+    if (isConfirm) {
+      setColumns((prev) => prev.filter((column) => column.id !== id));
+      setTasks((prev) => prev.filter((task) => task.columnId !== id));
+    }
+  };
+
+  const handleEditColumn = (id: string) => () => {
+    const newTitle = prompt("Column title");
+    if (newTitle) {
+      setColumns((prev) =>
+        prev.map((column) => {
+          if (column.id === id) {
+            return { ...column, title: newTitle };
+          }
+          return column;
+        })
+      );
+    }
+  };
+
   const handleDragEnd = (e: DragEndEvent) => {
     if (
       typeof e.active.id === "string" &&
       e.over?.data.current &&
-      TASK_STATUSES.includes(e.over.data.current.status)
+      columns.find((c) => c.id === e.over?.data.current?.columnId)
     ) {
-      updateTask(e.active.id, e.over.data.current.status);
+      updateTask(e.active.id, e.over.data.current.columnId);
     }
   };
   return (
     <main className="py-6 max-w-screen-xl mx-auto">
       <DndContext onDragEnd={handleDragEnd}>
-        <section className="grid grid-cols-3 gap-4">
-          <TasksHolder
-            title="New Tasks"
-            status="new_task"
-            tasks={tasks.filter((task) => task.status === "new_task")}
-            addTask={addTask}
-          />
-          <TasksHolder
-            title="In Progress"
-            status="in_progress"
-            tasks={tasks.filter((task) => task.status === "in_progress")}
-            addTask={addTask}
-          />
-          <TasksHolder
-            title="Done"
-            status="done"
-            tasks={tasks.filter((task) => task.status === "done")}
-            addTask={addTask}
-          />
+        <section className="grid grid-cols-4 items-start gap-4">
+          {columns.map(({ id, title }) => (
+            <TasksHolder
+              key={id}
+              title={title}
+              columnId={id}
+              tasks={tasks.filter((task) => task.columnId === id)}
+              addTask={addTask}
+              dropdownActions={{
+                handleDelete: handleDeleteColumn(id),
+                handleEdit: handleEditColumn(id),
+              }}
+            />
+          ))}
+          <Button onClick={handleAddColumn}>+ Add Column</Button>
         </section>
       </DndContext>
     </main>
@@ -80,38 +121,62 @@ function App() {
 
 type TasksHolderProps = {
   title: string;
-  status: Task["status"];
+  columnId: string;
   tasks: Task[];
   addTask: (task: Task) => void;
+  dropdownActions: {
+    handleEdit: () => void;
+    handleDelete: () => void;
+  };
 };
 
-function TasksHolder({ title, tasks, status, addTask }: TasksHolderProps) {
+function TasksHolder({
+  title,
+  tasks,
+  columnId,
+  addTask,
+  dropdownActions,
+}: TasksHolderProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: title + useId(),
-    data: { status },
+    data: { columnId },
   });
 
   const handleAddTask = () => {
     const title = prompt("Task title");
     if (title) {
-      addTask({ id: crypto.randomUUID(), title, status });
+      addTask({ id: crypto.randomUUID(), title, columnId });
     }
   };
 
   return (
-    <div
-      className={`${isOver ? "bg-slate-600" : "bg-slate-700"} rounded-md p-4`}
-      ref={setNodeRef}
-    >
-      <h3 className="text-2xl font-bold mb-4">{title}</h3>
-      <ul className="flex flex-col gap-2 mb-4">
-        {tasks.map((task, id) => (
-          <Task key={task.title + id} title={task.title} id={task.id} />
-        ))}
-        {tasks.length === 0 && <li>No tasks</li>}
-      </ul>
-      <Button onClick={handleAddTask}>Add</Button>
-    </div>
+    <Card className={isOver ? "bg-slate-100" : ""} ref={setNodeRef}>
+      <CardHeader className="flex flex-row justify-between items-center">
+        <CardTitle>{title}</CardTitle>
+        <DropdownMenu>
+          <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={dropdownActions.handleEdit}>
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={dropdownActions.handleDelete}>
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col gap-2 mb-4">
+          {tasks.map((task, id) => (
+            <Task key={task.title + id} title={task.title} id={task.id} />
+          ))}
+          {tasks.length === 0 && <li>No tasks</li>}
+        </ul>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleAddTask}>+ Add Task</Button>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -126,7 +191,7 @@ function Task({ id, title }: { id: string; title: string }) {
     : undefined;
   return (
     <li
-      className="text-lg bg-slate-900 p-2 rounded"
+      className="text-lg bg-slate-200 p-2 rounded"
       draggable
       ref={setNodeRef}
       style={style}
