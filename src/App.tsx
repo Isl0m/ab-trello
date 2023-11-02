@@ -1,31 +1,16 @@
-import {
-  DndContext,
-  DragEndEvent,
-  useDraggable,
-  useDroppable,
-} from "@dnd-kit/core";
+import { DndContext, DragEndEvent } from "@dnd-kit/core";
 
-import { useState, useId } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./components/ui/dropdown-menu";
+
+import { TasksHolder } from "./components/task-holder";
 
 const INITIAL_COLUMNS = ["New Task", "In Progress", "Done"].map((title) => ({
   id: crypto.randomUUID(),
   title,
 }));
-type Task = {
+
+export type Task = {
   id: string;
   title: string;
   columnId: string;
@@ -116,90 +101,6 @@ function App() {
         </section>
       </DndContext>
     </main>
-  );
-}
-
-type TasksHolderProps = {
-  title: string;
-  columnId: string;
-  tasks: Task[];
-  addTask: (task: Task) => void;
-  dropdownActions: {
-    handleEdit: () => void;
-    handleDelete: () => void;
-  };
-};
-
-function TasksHolder({
-  title,
-  tasks,
-  columnId,
-  addTask,
-  dropdownActions,
-}: TasksHolderProps) {
-  const { isOver, setNodeRef } = useDroppable({
-    id: title + useId(),
-    data: { columnId },
-  });
-
-  const handleAddTask = () => {
-    const title = prompt("Task title");
-    if (title) {
-      addTask({ id: crypto.randomUUID(), title, columnId });
-    }
-  };
-
-  return (
-    <Card className={isOver ? "bg-slate-100" : ""} ref={setNodeRef}>
-      <CardHeader className="flex flex-row justify-between items-center">
-        <CardTitle>{title}</CardTitle>
-        <DropdownMenu>
-          <DropdownMenuTrigger>Open</DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={dropdownActions.handleEdit}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={dropdownActions.handleDelete}>
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </CardHeader>
-      <CardContent>
-        <ul className="flex flex-col gap-2 mb-4">
-          {tasks.map((task, id) => (
-            <Task key={task.title + id} title={task.title} id={task.id} />
-          ))}
-          {tasks.length === 0 && <li>No tasks</li>}
-        </ul>
-      </CardContent>
-      <CardFooter>
-        <Button onClick={handleAddTask}>+ Add Task</Button>
-      </CardFooter>
-    </Card>
-  );
-}
-
-function Task({ id, title }: { id: string; title: string }) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: id,
-  });
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      }
-    : undefined;
-  return (
-    <li
-      className="text-lg bg-slate-200 p-2 rounded"
-      draggable
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-    >
-      {title}
-    </li>
   );
 }
 
