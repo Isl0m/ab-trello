@@ -1,9 +1,11 @@
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 import { TasksHolder } from "./components/task-holder";
+import { Plus } from "lucide-react";
+import { useTasks } from "./hooks/useTasks";
+import { useColumns } from "./hooks/useColumns";
 
 const INITIAL_COLUMNS = ["New Task", "In Progress", "Done"].map((title) => ({
   id: crypto.randomUUID(),
@@ -17,57 +19,15 @@ export type Task = {
 };
 
 function App() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [columns, setColumns] = useState(INITIAL_COLUMNS);
-
-  const updateTask = (taskId: string, columnId: string) => {
-    setTasks((prev) => {
-      const taskIndex = prev.findIndex((task) => task.id === taskId);
-
-      if (taskIndex === -1) return prev;
-      const task = prev[taskIndex];
-      task.columnId = columnId;
-
-      prev.splice(taskIndex, 1);
-      return [...prev, task];
-    });
-  };
-
-  const addTask = (task: Task) => {
-    setTasks((prev) => {
-      return [...prev, task];
-    });
-  };
-
-  const handleAddColumn = () => {
-    const title = prompt("Column title");
-    const foundColumn = columns.find((c) => c.title === title);
-    if (title && !foundColumn) {
-      setColumns((prev) => {
-        return [...prev, { id: crypto.randomUUID(), title }];
-      });
-    }
-  };
+  const { tasks, addTask, updateTask, removeTasksInColumn } = useTasks();
+  const { columns, handleAddColumn, handleEditColumn, removeColumn } =
+    useColumns(INITIAL_COLUMNS);
 
   const handleDeleteColumn = (id: string) => () => {
     const isConfirm = confirm("Are you sure?");
     if (isConfirm) {
-      setColumns((prev) => prev.filter((column) => column.id !== id));
-      setTasks((prev) => prev.filter((task) => task.columnId !== id));
-    }
-  };
-
-  const handleEditColumn = (id: string) => () => {
-    const newTitle = prompt("Column title");
-    if (newTitle) {
-      setColumns((prev) =>
-        prev.map((column) => {
-          if (column.id === id) {
-            return { ...column, title: newTitle };
-          }
-          return column;
-        })
-      );
+      removeColumn(id);
+      removeTasksInColumn(id);
     }
   };
 
@@ -80,6 +40,7 @@ function App() {
       updateTask(e.active.id, e.over.data.current.columnId);
     }
   };
+
   return (
     <main className="py-6 max-w-screen-xl mx-auto">
       <DndContext onDragEnd={handleDragEnd}>
@@ -97,7 +58,9 @@ function App() {
               }}
             />
           ))}
-          <Button onClick={handleAddColumn}>+ Add Column</Button>
+          <Button onClick={handleAddColumn}>
+            <Plus className="w-5 h-5 mr-2" /> Add Column
+          </Button>
         </section>
       </DndContext>
     </main>

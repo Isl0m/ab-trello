@@ -1,5 +1,3 @@
-"use client";
-
 import { Task as TaskType } from "@/App";
 import { useDroppable } from "@dnd-kit/core";
 import { useId } from "react";
@@ -18,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Task } from "./task";
+import { MoreHorizontal, Plus } from "lucide-react";
 
 type TasksHolderProps = {
   title: string;
@@ -54,7 +53,9 @@ export function TasksHolder({
       <CardHeader className="flex flex-row justify-between items-center">
         <CardTitle>{title}</CardTitle>
         <DropdownMenu>
-          <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+          <DropdownMenuTrigger>
+            <MoreHorizontal size={20} />
+          </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={dropdownActions.handleEdit}>
               Edit
@@ -74,7 +75,9 @@ export function TasksHolder({
         </ul>
       </CardContent>
       <CardFooter>
-        <Button onClick={handleAddTask}>+ Add Task</Button>
+        <Button onClick={handleAddTask}>
+          <Plus className="w-5 h-5 mr-2" /> Add Task
+        </Button>
       </CardFooter>
     </Card>
   );

@@ -1,5 +1,3 @@
-"use client";
-
 import { useDraggable } from "@dnd-kit/core";
 
 export function Task({ id, title }: { id: string; title: string }) {
